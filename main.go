@@ -20,7 +20,7 @@ func makeProjectCounter() func() (int, string) {
 }
 
 func main() {
-	if len(os.Args) < 4 {
+	if len(os.Args) < 2 {
 		fmt.Println("usage: ./automatic-octo-computing-machine user")
 		fmt.Println("environment variables: user_id, user_secret")
 		os.Exit(1)
@@ -28,7 +28,7 @@ func main() {
 
 	uid := os.Getenv("user_id")
 	secret := os.Getenv("user_secret")
-	username := os.Args[3]
+	username := os.Args[1]
 	client := apiwrap.NewClient(uid, secret)
 	fmtstr := "/v2/users/%d/projects_users?filter[project_id]=%d&page[size]=100"
 
@@ -51,8 +51,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if len(dat) > 0 && dat[0]["final_mark"] != nil {
-
-			fmt.Println(fmt.Sprintf("%s: %f", projectName, dat[0]["final_mark"]))
+			fmt.Println(fmt.Sprintf("%s: %1f", projectName, dat[0]["final_mark"]))
 		}
 		if projectID == 5 { // id of ft_printf
 			os.Exit(0)
