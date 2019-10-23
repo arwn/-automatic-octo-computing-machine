@@ -1,5 +1,5 @@
 # automatic-octo-computing-machine
-Great repository names are short and memorable. Need inspiration? How about automatic-octo-computing-machine? 
+checks the scores of users ft_ls, ft_printf, and fdf projects
 
 # usage
 ```
