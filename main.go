@@ -10,6 +10,12 @@ import (
 	"github.com/arwn/apiwrap"
 )
 
+type User struct {
+	ID    int64
+	Login string
+	URL   string
+}
+
 func makeProjectCounter() func() (int, string) {
 	projects := []string{"ft_ls", "fdf", "ft_printf"}
 	count := 2 // start at 2, first project is at 3
@@ -19,14 +25,8 @@ func makeProjectCounter() func() (int, string) {
 	}
 }
 
-func getUsers(client apiwrap.WrapperClient) []int64 {
-	type User struct {
-		ID    int64
-		Login string
-		URL   string
-	}
-
-	var userIDs []int64
+func getUsers(client apiwrap.WrapperClient) []User {
+	var users []User
 	page := 0
 
 	for { // loop over all users in campus 7 (ours ;)
@@ -49,13 +49,13 @@ func getUsers(client apiwrap.WrapperClient) []int64 {
 		}
 
 		for _, user := range users {
-			userIDs = append(userIDs, user.ID)
+			users = append(users, user)
 		}
 
 		page++
 		time.Sleep(time.Second) // don't dos the api
 	}
-	return userIDs
+	return users
 }
 
 func main() {
@@ -69,7 +69,7 @@ func main() {
 	fmt.Println(users)
 
 	for _, user := range users {
-		fmt.Printf("checking user %d\n", user)
+		fmt.Printf("checking user %s\n", user.Login)
 		counter := makeProjectCounter()
 		for { // each project {ls, fdf, printf}
 			projectID, projectName := counter()
@@ -83,7 +83,7 @@ func main() {
 				log.Fatal(err)
 			}
 			if len(dat) > 0 && dat[0]["final_mark"] != nil {
-				fmt.Println(fmt.Sprintf("%d %s: %1f", user, projectName, dat[0]["final_mark"]))
+				fmt.Println(fmt.Sprintf("%s %s: %1f", user.Login, projectName, dat[0]["final_mark"]))
 			}
 			if projectID == 5 { // id of ft_printf
 				break
