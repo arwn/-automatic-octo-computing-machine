@@ -10,6 +10,12 @@ import (
 	"github.com/arwn/apiwrap"
 )
 
+type User struct {
+	ID    int64
+	Login string
+	URL   string
+}
+
 func makeProjectCounter() func() (int, string) {
 	projects := []string{"ft_ls", "fdf", "ft_printf"}
 	count := 2 // start at 2, first project is at 3
@@ -19,44 +25,71 @@ func makeProjectCounter() func() (int, string) {
 	}
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("usage: ./automatic-octo-computing-machine user")
-		fmt.Println("environment variables: user_id, user_secret")
-		os.Exit(1)
-	}
+func getUsers(client apiwrap.WrapperClient) []User {
+	var users []User
+	page := 0
 
+	for { // loop over all users in campus 7 (ours ;)
+		body, err := client.GetBody(fmt.Sprintf("/v2/campus/7/users?page=%d", page))
+		if err != nil {
+			log.Println(err)
+			log.Println(body)
+			break
+		}
+		if len(body) == 0 {
+			break
+		}
+
+		var users []User
+		err = json.Unmarshal(body, &users)
+		if err != nil {
+			log.Println(err)
+			log.Println(body)
+			break
+		}
+
+		for _, user := range users {
+			users = append(users, user)
+		}
+
+		page++
+		time.Sleep(time.Second) // don't dos the api
+	}
+	return users
+}
+
+func main() {
 	uid := os.Getenv("user_id")
 	secret := os.Getenv("user_secret")
-	username := os.Args[1]
 	client := apiwrap.NewClient(uid, secret)
 	fmtstr := "/v2/users/%d/projects_users?filter[project_id]=%d&page[size]=100"
 
-	userID, err := client.GetUserID(username)
-	if err != nil {
-		fmt.Println(username + ": user not found")
-		os.Exit(1)
-	}
+	users := getUsers(client)
 
-	counter := makeProjectCounter()
-	for {
-		projectID, projectName := counter()
-		content, err := client.GetJSON(fmt.Sprintf(fmtstr, userID, projectID))
-		if err != nil {
-			log.Fatal(err)
+	fmt.Println(users)
+
+	for _, user := range users {
+		fmt.Printf("checking user %s\n", user.Login)
+		counter := makeProjectCounter()
+		for { // each project {ls, fdf, printf}
+			projectID, projectName := counter()
+			content, err := client.GetJSON(fmt.Sprintf(fmtstr, user, projectID))
+			if err != nil {
+				log.Fatal(err)
+			}
+			var dat []map[string]interface{}
+			err = json.Unmarshal(content, &dat)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(dat) > 0 && dat[0]["final_mark"] != nil {
+				fmt.Println(fmt.Sprintf("%s %s: %1f", user.Login, projectName, dat[0]["final_mark"]))
+			}
+			if projectID == 5 { // id of ft_printf
+				break
+			}
+			time.Sleep(time.Second) // sleep for api rate limit
 		}
-		var dat []map[string]interface{}
-		err = json.Unmarshal(content, &dat)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if len(dat) > 0 && dat[0]["final_mark"] != nil {
-			fmt.Println(fmt.Sprintf("%s: %1f", projectName, dat[0]["final_mark"]))
-		}
-		if projectID == 5 { // id of ft_printf
-			os.Exit(0)
-		}
-		time.Sleep(time.Second) // sleep for api rate limit
 	}
 
 }
